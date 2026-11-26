@@ -89,6 +89,7 @@ export const MODULES: ModuleMeta[] = [
     actions: ["启动派生", "确认派生", "标记失败"],
     actionTargets: {"启动派生": "派生中", "确认派生": "已派生", "标记失败": "派生失败"},
     metrics: ["汇总总数", "已派生条目", "派生失败条目"],
+    review: {submitAction: "提交送审", confirmAction: "确认新关联"},
   },
   {
     key: "grain_declare",
@@ -100,6 +101,7 @@ export const MODULES: ModuleMeta[] = [
     actions: ["确认声明", "提交修订", "作废声明"],
     actionTargets: {"确认声明": "已声明", "提交修订": "待修订", "作废声明": "已作废"},
     metrics: ["声明总数", "已声明条目", "待修订声明"],
+    reviewTodo: true,
   },
   {
     key: "measure_catalog",

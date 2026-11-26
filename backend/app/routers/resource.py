@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
-from app.schemas import ActionPayload, ActionResult, EntryPayload, PageResult
+from app.schemas import ActionPayload, ActionResult, EntryPayload, PageResult, SignPayload
 from app.services import service_for
 
 router = APIRouter(prefix="/api", tags=["业务资源"])
@@ -71,6 +71,28 @@ def export_entries(
         iter([output.getvalue()]), media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{module}.csv"'},
     )
+
+
+@router.get("/{module}/review_todos", response_model=dict)
+def review_todos(module: str) -> dict[str, Any]:
+    """复核待办：由提供 review_todos 的领域服务（粒度声明）给出全部回执。"""
+    service = require_service(module)
+    todos = getattr(service, "review_todos", None)
+    if todos is None:
+        raise HTTPException(status_code=404, detail=f"{module} 不提供复核待办")
+    items = todos()
+    return {"items": items, "total": len(items)}
+
+
+@router.post("/{module}/review_todos/{receipt}/sign", response_model=ActionResult)
+def sign_review_todo(module: str, receipt: str, payload: SignPayload) -> ActionResult:
+    """签收复核回执：暂停中或已签收的回执会被领域服务拒绝。"""
+    service = require_service(module)
+    sign = getattr(service, "sign_receipt", None)
+    if sign is None:
+        raise HTTPException(status_code=404, detail=f"{module} 不支持复核签收")
+    ok, message, ticket = sign(receipt, payload.group)
+    return ActionResult(ok=ok, message=message, entry=ticket)
 
 
 @router.get("/{module}/{entry_id}", response_model=dict)

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.review_board import review_board
 from app.services.base import BaseModuleService
 from app.store import store
 
@@ -15,6 +16,37 @@ class GrainDeclareService(BaseModuleService):
     STATUS_ORDER = ["草稿", "已声明", "待修订", "已作废"]
     ACTION_RULES = {"确认声明": "已声明", "提交修订": "待修订", "作废声明": "已作废"}
     NEGATIVE_ACTIONS = []
+
+    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+        entry, message = super().run_action(entry_id, action)
+        if entry is not None and action == "提交修订":
+            paused = self._pause_review_tickets(entry)
+            if paused:
+                receipts = "、".join(t["受理号"] for t in paused)
+                message = (
+                    f"{message}；关联复核回执 {receipts} 已暂停，"
+                    f"待汇总员确认新粒度关联"
+                )
+        return entry, message
+
+    def review_todos(self) -> list[dict[str, Any]]:
+        """复核待办：粒度页签收台看到的全部回执（含历史回执留痕）。"""
+        return review_board.tickets()
+
+    def sign_receipt(
+        self, receipt: str, group: str | None = None,
+    ) -> tuple[bool, str, dict[str, Any] | None]:
+        """签收复核回执：暂停中或已签收的回执拒绝，一个受理号不能交给两组。"""
+        return review_board.sign(receipt, group)
+
+    @staticmethod
+    def _pause_review_tickets(declaration: dict[str, Any]) -> list[dict[str, Any]]:
+        candidate = {
+            "声明编号": str(declaration.get("声明编号", "")),
+            "维度组合": str(declaration.get("维度组合", "")),
+            "声明版本": str(declaration.get("声明版本", "")),
+        }
+        return review_board.pause_for_declaration(candidate["声明编号"], candidate)
 
     def declare_grain(
         self, declare_id: str, fact_table: str, one_row_means: str,
@@ -34,12 +66,17 @@ class GrainDeclareService(BaseModuleService):
         return True, f"粒度声明 {declare_id} 已生效：{one_row_means}", entry
 
     def revise_grain(self, declare_id: str, new_dims: str) -> tuple[bool, str]:
-        """修订粒度声明：触发汇总层重算与下游引用更新。"""
+        """修订粒度声明：触发汇总层重算与下游引用更新，关联复核回执同步暂停。"""
         rows = store.rows(self.MODULE)
         for r in rows:
             if r.get("声明编号") == declare_id:
                 r["status"] = "待修订"
                 r["维度组合"] = new_dims
                 r["pending"] = True
-                return True, f"粒度声明 {declare_id} 已提交修订：{new_dims}"
+                paused = self._pause_review_tickets(r)
+                suffix = ""
+                if paused:
+                    receipts = "、".join(t["受理号"] for t in paused)
+                    suffix = f"；关联复核回执 {receipts} 已暂停，待汇总员确认新粒度关联"
+                return True, f"粒度声明 {declare_id} 已提交修订：{new_dims}{suffix}"
         return False, f"粒度声明 {declare_id} 不存在"

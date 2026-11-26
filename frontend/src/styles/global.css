@@ -70,3 +70,11 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .analysis-chart { display: flex; align-items: flex-end; gap: 8px; height: 160px; padding: 12px 0; }
 .analysis-bar { flex: 1; border-radius: 4px 4px 0 0; background: var(--brand); min-width: 24px; position: relative; transition: height 0.4s; }
 .analysis-bar span { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--muted); white-space: nowrap; }
+/* 送审与复核待办面板 */
+.review-panel { margin-top: 14px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.review-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.review-head h3 { margin: 0; font-size: 14px; }
+.review-summary { color: var(--muted); font-size: 12px; flex: 1; }
+.review-message { color: var(--muted); font-size: 12px; margin: 6px 0; }
+.review-table { margin-top: 8px; }
+.select-col { width: 40px; text-align: center; }

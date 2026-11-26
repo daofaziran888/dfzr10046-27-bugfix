@@ -29,3 +29,7 @@ class EntryPayload(BaseModel):
 class ActionPayload(BaseModel):
     action: str
     remark: str | None = None
+
+
+class SignPayload(BaseModel):
+    group: str | None = None
